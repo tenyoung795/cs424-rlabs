@@ -1,0 +1,62 @@
+const unsigned int ON_THRESHOLD = 50;
+const unsigned int OFF_THRESHOLD = 64;
+
+task main() {
+    #ifdef USE_MOTOR
+    ResetTachoCount(OUT_ABC);
+    OnFwdSync(OUT_AB, 75, 0);
+    OnRev(OUT_C, 25);
+    #endif
+
+    SetSensorLight(IN_1);
+
+    #ifdef USE_MOTOR
+    long lastmotorA = 0;
+    long lastmotorB = 0;
+    long lastmotorC = 0;
+    #endif
+
+    while (true) {
+        ClearScreen();
+
+        unsigned int rawLight = SensorValueRaw(IN_1);
+		unsigned int scaleLight = SensorValue(IN_1);
+
+        #ifdef USE_MOTOR
+        long motorA = MotorTachoCount(OUT_A);
+        long motorB = MotorTachoCount(OUT_B);
+        long motorC = MotorTachoCount(OUT_C);
+
+        long deltamotorA = motorA - lastmotorA;
+        long deltamotorB = motorB - lastmotorB;
+        long deltamotorC = motorC - lastmotorC;
+
+        lastmotorA = motorA;
+        lastmotorB = motorB;
+        lastmotorC = motorC;
+
+        // Line 0
+        TextOut(0,0,"OUTA");
+        TextOut(33,0,"OUTB");
+        TextOut(66,0,"OUTC");
+
+        // Line 1
+        NumOut(0,8, motorA);
+        NumOut(33,8,motorB);
+        NumOut(66,8,motorC);
+
+        // Line 2
+        NumOut(0,16,deltamotorA);
+        NumOut(33,16,deltamotorB);
+        NumOut(66,16,deltamotorC);
+        #endif
+
+        TextOut(0,32,"IN1");
+        NumOut(0,40,rawLight);
+        NumOut(0,48,scaleLight);
+
+        // Line 7
+        NumOut(0,56,(CurrentTick()-FirstTick())/1000);
+        Wait(100);
+    }
+}
