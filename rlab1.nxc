@@ -16,11 +16,70 @@ task main() {
     long lastmotorC = 0;
     #endif
 
+    enum TurnDirection {
+        LEFT = 0,
+        RIGHT = 1,
+    };
+
+    enum Status {
+        FORWARD,
+        BACKWARD,
+        CORRECTED_FORWARD,
+        DONE,
+    };
+
+    unsigned int previousScaleLight = 0;
+    TurnDirection turnDirection = LEFT;
+    Status status = FORWARD;
+    bool turning = false;
     while (true) {
         ClearScreen();
 
         unsigned int rawLight = SensorValueRaw(IN_1);
 		unsigned int scaleLight = SensorValue(IN_1);
+
+        switch (status) {
+        case FORWARD:
+        case CORRECTED_FORWARD: {
+            if (scaleLight < ON_THRESHOLD) {
+                // If we got back enough on the tape while turning, then we have
+                // made a successful turn.
+                if (turning) {
+                    turning = false;
+                    status = FORWARD;
+                }
+                // Go forward.
+            } else if (scaleLight < OFF_THRESHOLD) {
+                // Since we generally travel in a "line," assume to turn
+                // opposite the previous turn direction.
+                if (!turning) {
+                    turnDirection = !turnDirection;
+                    turning = true;
+                }
+                const float threshold = OFF_THRESHOLD;
+                float ratio_off = (OFF_THRESHOLD - scaleLight) / threshold;
+                // Turn based on the ratio off the tape.
+            } else if (status == FORWARD) {
+                // We've made a bad turn; go back.
+                status = BACKWARD;
+            } else {
+                // Our corrective turn was also bad, meaning we've reached the end.
+                status = DONE;
+            }
+            break;
+        }
+        case BACKWARD:
+            if (scaleLight < ON_THRESHOLD) {
+                // Make the corrective turn.
+                status = CORRECTED_FORWARD;
+            } else {
+                // Go backward.
+            }
+            break;
+        case DONE:
+            break;
+        }
+        previousScaleLight = scaleLight;
 
         #ifdef USE_MOTOR
         long motorA = MotorTachoCount(OUT_A);
