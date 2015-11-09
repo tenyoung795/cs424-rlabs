@@ -1,17 +1,18 @@
 const unsigned int ON_THRESHOLD = 50;
 const unsigned int OFF_THRESHOLD = 64;
+const string STATUS_STRINGS[] = {"forward", "backward", "correcting", "done"};
+
+//#define USE_MOTOR true
 
 task main() {
     #ifdef USE_MOTOR
-    ResetTachoCount(OUT_ABC);
-    OnFwdSync(OUT_AB, 75, 0);
-    OnRev(OUT_C, 25);
+    ResetTachoCount(OUT_BC);
+    OnFwdSync(OUT_BC, 75, 0);
     #endif
 
-    SetSensorLight(IN_1);
+    SetSensorLight(IN_3);
 
     #ifdef USE_MOTOR
-    long lastmotorA = 0;
     long lastmotorB = 0;
     long lastmotorC = 0;
     #endif
@@ -35,8 +36,8 @@ task main() {
     while (true) {
         ClearScreen();
 
-        unsigned int rawLight = SensorValueRaw(IN_1);
-		unsigned int scaleLight = SensorValue(IN_1);
+        unsigned int rawLight = SensorValueRaw(IN_3);
+		unsigned int scaleLight = SensorValue(IN_3);
 
         switch (status) {
         case FORWARD:
@@ -71,6 +72,7 @@ task main() {
         case BACKWARD:
             if (scaleLight < ON_THRESHOLD) {
                 // Make the corrective turn.
+                turning = false;
                 status = CORRECTED_FORWARD;
             } else {
                 // Go backward.
@@ -82,35 +84,38 @@ task main() {
         previousScaleLight = scaleLight;
 
         #ifdef USE_MOTOR
-        long motorA = MotorTachoCount(OUT_A);
         long motorB = MotorTachoCount(OUT_B);
         long motorC = MotorTachoCount(OUT_C);
 
-        long deltamotorA = motorA - lastmotorA;
         long deltamotorB = motorB - lastmotorB;
         long deltamotorC = motorC - lastmotorC;
 
-        lastmotorA = motorA;
         lastmotorB = motorB;
         lastmotorC = motorC;
 
         // Line 0
-        TextOut(0,0,"OUTA");
-        TextOut(33,0,"OUTB");
-        TextOut(66,0,"OUTC");
+        TextOut(0,0,"OUTB");
+        TextOut(50,0,"OUTC");
 
         // Line 1
-        NumOut(0,8, motorA);
-        NumOut(33,8,motorB);
-        NumOut(66,8,motorC);
+        NumOut(0,8,motorB);
+        NumOut(50,8,motorC);
 
         // Line 2
-        NumOut(0,16,deltamotorA);
-        NumOut(33,16,deltamotorB);
-        NumOut(66,16,deltamotorC);
+        NumOut(0,16,deltamotorB);
+        NumOut(50,16,deltamotorC);
         #endif
 
-        TextOut(0,32,"IN1");
+        if (!turning) {
+            TextOut(0, 24, "^");
+        } else if (turnDirection == LEFT) {
+            TextOut(0, 24, "<-");
+        } else {
+            TextOut(0, 24, "->");
+        }
+        TextOut(50, 24, STATUS_STRINGS[status]);
+
+        TextOut(0,32,"IN3");
         NumOut(0,40,rawLight);
         NumOut(0,48,scaleLight);
 
