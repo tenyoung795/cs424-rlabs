@@ -1,126 +1,87 @@
-const unsigned int ON_THRESHOLD = 40;
-const unsigned int OFF_THRESHOLD = 62;
-const string STATUS_STRINGS[] = {"forward", "backward", "correcting", "done"};
+const unsigned int ON_THRESHOLD = 50;
+const unsigned int OFF_THRESHOLD = 58;
 
-//#define USE_MOTOR true
+const unsigned int HIGH = 80;
+const unsigned int LOW = 20;
+
+enum TurnDirection {
+    LEFT = 0,
+    RIGHT = 1,
+};
+
+unsigned int scaleLight;
+TurnDirection turnDirection = 0;
+bool onTape = true;
+bool skipChange = false;
+
+task display() {
+	if (turnDirection == LEFT) {
+	    TextOut(0, 0, "<-");
+	} else {
+	    TextOut(0, 0, "->");
+	}
+	
+	if (onTape) {
+		TextOut(0, 8, "on tape");
+	} else {
+		TextOut(0, 8, "off tape");
+	}
+	if (skipChange) {
+		TextOut(50, 8, "skipping first");
+	} else {
+		TextOut(50, 8, "normal");
+	}
+	
+	TextOut(0,16,"scaleLight");
+	NumOut(0,24,scaleLight);
+	
+	// Line 7
+	NumOut(0,32,(CurrentTick()-FirstTick())/1000);
+        Wait(100);
+}
 
 task main() {
-    #ifdef USE_MOTOR
     ResetTachoCount(OUT_BC);
     OnFwdSync(OUT_BC, 75, 0);
-    #endif
+	unsigned long offTicks = 0;
+	unsigned long startTick = 0;
 
     SetSensorLight(IN_3);
 
-    #ifdef USE_MOTOR
-    long lastmotorB = 0;
-    long lastmotorC = 0;
-    #endif
+	OnFwd(OUT_A, LOW);
+	OnFwd(OUT_C, HIGH);
 
-    enum TurnDirection {
-        LEFT = 0,
-        RIGHT = 1,
-    };
-
-    enum Status {
-        FORWARD,
-        BACKWARD,
-        CORRECTED_FORWARD,
-        DONE,
-    };
-
-    unsigned int previousScaleLight = 0;
-    TurnDirection turnDirection = LEFT;
-    Status status = FORWARD;
-    bool turning = false;
+	start display;
     while (true) {
-        ClearScreen();
+	scaleLight = SensorValue(IN_3);
 
-        unsigned int rawLight = SensorValueRaw(IN_3);
-		unsigned int scaleLight = SensorValue(IN_3);
+	if (onTape) {
+		if (scaleLight > OFF_THRESHOLD) {
+			onTape = false;
 
-        switch (status) {
-        case FORWARD:
-        case CORRECTED_FORWARD: {
-            if (scaleLight < ON_THRESHOLD) {
-                // If we got back enough on the tape while turning, then we have
-                // made a successful turn.
-                if (turning) {
-                    turning = false;
-                    status = FORWARD;
-                }
-                // Go forward.
-            } else if (scaleLight < OFF_THRESHOLD) {
-                // Since we generally travel in a "line," assume to turn
-                // opposite the previous turn direction.
-                if (!turning) {
-                    turnDirection = !turnDirection;
-                    turning = true;
-                }
-                const float threshold = OFF_THRESHOLD;
-                float ratio_off = (OFF_THRESHOLD - scaleLight) / threshold;
-                // Turn based on the ratio off the tape.
-            } else if (status == FORWARD) {
-                // We've made a bad turn; go back.
-                status = BACKWARD;
-            } else {
-                // Our corrective turn was also bad, meaning we've reached the end.
-                status = DONE;
-            }
-            break;
-        }
-        case BACKWARD:
-            if (scaleLight < ON_THRESHOLD) {
-                // Make the corrective turn.
-                turning = false;
-                status = CORRECTED_FORWARD;
-            } else {
-                // Go backward.
-            }
-            break;
-        case DONE:
-            break;
-        }
-        previousScaleLight = scaleLight;
-
-        #ifdef USE_MOTOR
-        long motorB = MotorTachoCount(OUT_B);
-        long motorC = MotorTachoCount(OUT_C);
-
-        long deltamotorB = motorB - lastmotorB;
-        long deltamotorC = motorC - lastmotorC;
-
-        lastmotorB = motorB;
-        lastmotorC = motorC;
-
-        // Line 0
-        TextOut(0,0,"OUTB");
-        TextOut(50,0,"OUTC");
-
-        // Line 1
-        NumOut(0,8,motorB);
-        NumOut(50,8,motorC);
-
-        // Line 2
-        NumOut(0,16,deltamotorB);
-        NumOut(50,16,deltamotorC);
-        #endif
-
-        if (!turning) {
-            TextOut(0, 24, "^");
-        } else if (turnDirection == LEFT) {
-            TextOut(0, 24, "<-");
-        } else {
-            TextOut(0, 24, "->");
-        }
-        TextOut(50, 24, STATUS_STRINGS[status]);
-
-        TextOut(0,32,"IN3");
-        NumOut(0,40,rawLight);
-        NumOut(0,48,scaleLight);
-
-        // Line 7
-        NumOut(0,56,(CurrentTick()-FirstTick())/1000);
-        Wait(100);
+			startTick = CurrentTick();
+			if (skipChange) {
+				skipChange = false;
+			} else {
+				turnDirection = !turnDirection;
+				if (turnDirection == LEFT) {	
+					OnFwd(OUT_A, LOW);
+				 	OnFwd(OUT_C, HIGH);
+				} else {
+					OnFwd(OUT_A, HIGH);
+				 	OnFwd(OUT_C, LOW);
+	
+				}
+			}
+		}
+	} else {
+		if (scaleLight <= ON_THRESHOLD) {
+			onTape = true;
+			
+		}
+		if (CurrentTick() - startTick >= 1500) {
+			skipChange = true;
+		}
+	}
     }
 }
