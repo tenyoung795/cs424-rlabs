@@ -16,6 +16,8 @@ bool skipChange = false;
 
 task display() {
     while (true) {
+        ClearScreen();
+
         if (turnDirection == LEFT) {
             TextOut(0, 0, "->");
         } else {
