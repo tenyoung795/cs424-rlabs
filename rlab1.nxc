@@ -15,29 +15,31 @@ bool onTape = true;
 bool skipChange = false;
 
 task display() {
-    if (turnDirection == LEFT) {
-        TextOut(0, 0, "<-");
-    } else {
-        TextOut(0, 0, "->");
-    }
+    while (true) {
+        if (turnDirection == LEFT) {
+            TextOut(0, 0, "<-");
+        } else {
+            TextOut(0, 0, "->");
+        }
 
-    if (onTape) {
-        TextOut(0, 8, "on tape");
-    } else {
-        TextOut(0, 8, "off tape");
-    }
-    if (skipChange) {
-        TextOut(50, 8, "skipping first");
-    } else {
-        TextOut(50, 8, "normal");
-    }
+        if (onTape) {
+            TextOut(0, 8, "on tape");
+        } else {
+            TextOut(0, 8, "off tape");
+        }
+        if (skipChange) {
+            TextOut(50, 8, "skipping first");
+        } else {
+            TextOut(50, 8, "normal");
+        }
 
-    TextOut(0,16,"scaleLight");
-    NumOut(0,24,scaleLight);
+        TextOut(0,16,"scaleLight");
+        NumOut(0,24,scaleLight);
 
-    // Line 7
-    NumOut(0,32,(CurrentTick()-FirstTick())/1000);
-    Wait(100);
+        // Line 7
+        NumOut(0,32,(CurrentTick()-FirstTick())/1000);
+        Wait(100);
+    }
 }
 
 task main() {
