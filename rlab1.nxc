@@ -17,9 +17,9 @@ bool skipChange = false;
 task display() {
     while (true) {
         if (turnDirection == LEFT) {
-            TextOut(0, 0, "<-");
-        } else {
             TextOut(0, 0, "->");
+        } else {
+            TextOut(0, 0, "<-");
         }
 
         if (onTape) {
