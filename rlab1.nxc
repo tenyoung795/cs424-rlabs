@@ -1,5 +1,5 @@
-const unsigned int ON_THRESHOLD = 50;
-const unsigned int OFF_THRESHOLD = 64;
+const unsigned int ON_THRESHOLD = 40;
+const unsigned int OFF_THRESHOLD = 62;
 const string STATUS_STRINGS[] = {"forward", "backward", "correcting", "done"};
 
 //#define USE_MOTOR true
