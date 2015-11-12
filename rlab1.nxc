@@ -12,36 +12,49 @@ enum TurnDirection {
 unsigned int scaleLight;
 TurnDirection turnDirection = 0;
 bool onTape = true;
-bool skipChange = false;
+int offHalfCircles = 0;
+
+void refreshScreen() {
+    ClearScreen();
+
+    if (turnDirection == LEFT) {
+        TextOut(0, 0, "->");
+    } else {
+        TextOut(0, 0, "<-");
+    }
+
+    if (onTape) {
+        TextOut(0, 8, "on tape");
+    } else {
+        TextOut(0, 8, "off tape");
+    }
+
+    switch (offHalfCircles) {
+    case 0:
+        TextOut(50, 8, "normal");
+        break;
+    case 1:
+        TextOut(50, 8, "skip next");
+        break;
+    case 2:
+        TextOut(50, 8, "done");
+        break;
+    }
+
+    TextOut(0,16,"scaleLight");
+    NumOut(0,24,scaleLight);
+
+    // Line 7
+    NumOut(0,32,(CurrentTick()-FirstTick())/1000);
+}
 
 task display() {
-    while (true) {
-        ClearScreen();
-
-        if (turnDirection == LEFT) {
-            TextOut(0, 0, "->");
-        } else {
-            TextOut(0, 0, "<-");
-        }
-
-        if (onTape) {
-            TextOut(0, 8, "on tape");
-        } else {
-            TextOut(0, 8, "off tape");
-        }
-        if (skipChange) {
-            TextOut(50, 8, "skipping first");
-        } else {
-            TextOut(50, 8, "normal");
-        }
-
-        TextOut(0,16,"scaleLight");
-        NumOut(0,24,scaleLight);
-
-        // Line 7
-        NumOut(0,32,(CurrentTick()-FirstTick())/1000);
+    while (offHalfCircles < 2) {
+        refreshScreen();
         Wait(100);
     }
+    refreshScreen();
+    Wait(10000);
 }
 
 task main() {
@@ -56,7 +69,7 @@ task main() {
     OnFwd(OUT_C, HIGH);
 
     start display;
-    while (true) {
+    while (offHalfCircles < 2) {
         scaleLight = SensorValue(IN_3);
 
         if (onTape) {
@@ -64,8 +77,8 @@ task main() {
                 onTape = false;
 
                 startTick = CurrentTick();
-                if (skipChange) {
-                    skipChange = false;
+                if (offHalfCircles > 0) {
+                    --offHalfCircles;
                 } else {
                     turnDirection = !turnDirection;
                     if (turnDirection == LEFT) {
@@ -84,7 +97,7 @@ task main() {
 
             }
             if (CurrentTick() - startTick >= 1500) {
-                skipChange = true;
+                ++offHalfCircles;
             }
         }
     }
