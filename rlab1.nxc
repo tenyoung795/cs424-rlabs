@@ -58,13 +58,11 @@ task display() {
 }
 
 task main() {
-    ResetTachoCount(OUT_BC);
-    OnFwdSync(OUT_BC, 75, 0);
-    unsigned long offTicks = 0;
     unsigned long startTick = 0;
 
     SetSensorLight(IN_3);
 
+    ResetTachoCount(OUT_AC);
     OnFwd(OUT_A, LOW);
     OnFwd(OUT_C, HIGH);
 
