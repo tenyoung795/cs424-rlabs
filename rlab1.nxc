@@ -9,10 +9,18 @@ enum TurnDirection {
     RIGHT = 1,
 };
 
+enum Stage {
+    NORMAL = 0,
+    REVERSING = 1,
+    RETRYING = 2,
+    DONE = 3,
+};
+
 unsigned int scaleLight;
+unsigned long duration;
 TurnDirection turnDirection = 0;
-bool onTape = true;
-int offHalfCircles = 0;
+bool onTape = false;
+Stage stage = 0;
 
 void refreshScreen() {
     ClearScreen();
@@ -29,27 +37,31 @@ void refreshScreen() {
         TextOut(0, 8, "off tape");
     }
 
-    switch (offHalfCircles) {
-    case 0:
-        TextOut(50, 8, "normal");
+    switch (stage) {
+    case NORMAL:
+        TextOut(0, 16, "normal");
         break;
-    case 1:
-        TextOut(50, 8, "skip next");
+    case REVERSING:
+        TextOut(0, 16, "reversing");
         break;
-    case 2:
-        TextOut(50, 8, "done");
+    case RETRYING:
+        TextOut(0, 16, "retrying");
+        break;
+    case DONE:
+        TextOut(0, 16, "done");
         break;
     }
+    NumOut(66, 16, duration);
 
-    TextOut(0,16,"scaleLight");
-    NumOut(0,24,scaleLight);
+    TextOut(0,24,"scaleLight");
+    NumOut(0,32,scaleLight);
 
     // Line 7
-    NumOut(0,32,(CurrentTick()-FirstTick())/1000);
+    NumOut(0,40,(CurrentTick()-FirstTick())/1000);
 }
 
 task display() {
-    while (offHalfCircles < 2) {
+    while (stage != DONE) {
         refreshScreen();
         Wait(100);
     }
@@ -58,45 +70,73 @@ task display() {
 }
 
 task main() {
-    unsigned long startTick = 0;
-
     SetSensorLight(IN_3);
 
     ResetTachoCount(OUT_AC);
-    OnFwd(OUT_A, LOW);
-    OnFwd(OUT_C, HIGH);
+    OnFwd(OUT_A, HIGH);
+    OnFwd(OUT_C, LOW);
 
     start display;
-    while (offHalfCircles < 2) {
+    unsigned long startTick = CurrentTick();
+    while (stage != DONE) {
         scaleLight = SensorValue(IN_3);
 
         if (onTape) {
             if (scaleLight > OFF_THRESHOLD) {
                 onTape = false;
-
-                startTick = CurrentTick();
-                if (offHalfCircles > 0) {
-                    --offHalfCircles;
-                } else {
+                // When we are reversig, we just want to get back on the tape.
+                if (stage != REVERSING) {
+                    stage = NORMAL;
+                    startTick = CurrentTick();
                     turnDirection = !turnDirection;
                     if (turnDirection == LEFT) {
-                        OnFwd(OUT_A, LOW);
-                        OnFwd(OUT_C, HIGH);
-                    } else {
                         OnFwd(OUT_A, HIGH);
                         OnFwd(OUT_C, LOW);
-
+                    } else {
+                        OnFwd(OUT_A, LOW);
+                        OnFwd(OUT_C, HIGH);
                     }
                 }
             }
         } else {
             if (scaleLight <= ON_THRESHOLD) {
                 onTape = true;
-
             }
-            if (CurrentTick() - startTick >= 1500) {
-                ++offHalfCircles;
+            duration = CurrentTick() - startTick;
+            switch (stage) {
+            case NORMAL:
+                if (duration > 1800) {
+                    if (turnDirection == LEFT) {
+                        OnRev(OUT_A, HIGH);
+                        OnRev(OUT_C, LOW);
+                    } else {
+                        OnRev(OUT_A, LOW);
+                        OnRev(OUT_C, HIGH);
+                    }
+                    stage = REVERSING;
+                }
+                break;
+            case REVERSING:
+                if (duration > 3600) {
+                    turnDirection = !turnDirection;
+                    if (turnDirection == LEFT) {
+                        OnFwd(OUT_A, HIGH);
+                        OnFwd(OUT_C, LOW);
+                    } else {
+                        OnFwd(OUT_A, LOW);
+                        OnFwd(OUT_C, HIGH);
+                    }
+                    stage = RETRYING;
+                }
+                break;
+            case RETRYING:
+                if (duration > 5600) {
+                    stage = DONE;
+                }
+                break;
             }
         }
     }
+    Off(OUT_AC);
+    PlayFile("startup.rso");
 }
