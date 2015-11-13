@@ -4,6 +4,8 @@ const unsigned int OFF_THRESHOLD = 58;
 const unsigned int HIGH = 80;
 const unsigned int LOW = 20;
 
+const long RIGHT_ANGLE_TACHO_COUNT = 900;
+
 enum TurnDirection {
     LEFT = 0,
     RIGHT = 1,
@@ -77,7 +79,6 @@ task main() {
     OnFwd(OUT_C, LOW);
 
     start display;
-    unsigned long startTick = CurrentTick();
     while (stage != DONE) {
         scaleLight = SensorValue(IN_3);
 
@@ -87,7 +88,7 @@ task main() {
                 // When we are reversig, we just want to get back on the tape.
                 if (stage != REVERSING) {
                     stage = NORMAL;
-                    startTick = CurrentTick();
+                    ResetTachoCount(OUT_AC);
                     turnDirection = !turnDirection;
                     if (turnDirection == LEFT) {
                         OnFwd(OUT_A, HIGH);
@@ -102,10 +103,11 @@ task main() {
             if (scaleLight <= ON_THRESHOLD) {
                 onTape = true;
             }
-            duration = CurrentTick() - startTick;
+            byte dominantOut = turnDirection == LEFT ? OUT_A : OUT_C;
+            long count = MotorTachoCount(dominantOut);
             switch (stage) {
             case NORMAL:
-                if (duration > 1800) {
+                if (count > RIGHT_ANGLE_TACHO_COUNT) {
                     if (turnDirection == LEFT) {
                         OnRev(OUT_A, HIGH);
                         OnRev(OUT_C, LOW);
@@ -117,7 +119,7 @@ task main() {
                 }
                 break;
             case REVERSING:
-                if (duration > 3600) {
+                if (count > 2 * RIGHT_ANGLE_TACHO_COUNT) {
                     turnDirection = !turnDirection;
                     if (turnDirection == LEFT) {
                         OnFwd(OUT_A, HIGH);
@@ -130,7 +132,7 @@ task main() {
                 }
                 break;
             case RETRYING:
-                if (duration > 5600) {
+                if (count > 3 * RIGHT_ANGLE_TACHO_COUNT) {
                     stage = DONE;
                 }
                 break;
