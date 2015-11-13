@@ -1,10 +1,12 @@
 const unsigned int ON_THRESHOLD = 50;
-const unsigned int OFF_THRESHOLD = 58;
+const unsigned int OFF_THRESHOLD = 60;
 
 const unsigned int HIGH = 80;
 const unsigned int LOW = 20;
 
-const long RIGHT_ANGLE_TACHO_COUNT = 900;
+const long RIGHT_ANGLE_TACHO_COUNT = 800;
+const long REVERSE_RIGHT_ANGLE_TACHO_COUNT = -700;
+const long RETRY_RIGHT_ANGLE_TACHO_COUNT = 500;
 
 enum TurnDirection {
     LEFT = 0,
@@ -19,10 +21,10 @@ enum Stage {
 };
 
 unsigned int scaleLight;
-unsigned long duration;
 TurnDirection turnDirection = 0;
-bool onTape = false;
+bool onTape = true;
 Stage stage = 0;
+long count;
 
 void refreshScreen() {
     ClearScreen();
@@ -53,9 +55,8 @@ void refreshScreen() {
         TextOut(0, 16, "done");
         break;
     }
-    NumOut(66, 16, duration);
+    NumOut(0, 24, count);
 
-    TextOut(0,24,"scaleLight");
     NumOut(0,32,scaleLight);
 
     // Line 7
@@ -81,33 +82,35 @@ task main() {
     start display;
     while (stage != DONE) {
         scaleLight = SensorValue(IN_3);
+        if (turnDirection == LEFT) {
+            count = MotorTachoCount(OUT_A);
+        } else {
+            count = MotorTachoCount(OUT_C);
+        }
 
         if (onTape) {
             if (scaleLight > OFF_THRESHOLD) {
                 onTape = false;
-                // When we are reversig, we just want to get back on the tape.
-                if (stage != REVERSING) {
-                    stage = NORMAL;
-                    ResetTachoCount(OUT_AC);
-                    turnDirection = !turnDirection;
-                    if (turnDirection == LEFT) {
-                        OnFwd(OUT_A, HIGH);
-                        OnFwd(OUT_C, LOW);
-                    } else {
-                        OnFwd(OUT_A, LOW);
-                        OnFwd(OUT_C, HIGH);
-                    }
+                stage = NORMAL;
+                ResetTachoCount(OUT_AC);
+                turnDirection = !turnDirection;
+                if (turnDirection == LEFT) {
+                    OnFwd(OUT_A, HIGH);
+                    OnFwd(OUT_C, LOW);
+                } else {
+                    OnFwd(OUT_A, LOW);
+                    OnFwd(OUT_C, HIGH);
                 }
             }
         } else {
-            if (scaleLight <= ON_THRESHOLD) {
+            // When we are reversing, we just want to get back on the tape.
+            if (scaleLight <= ON_THRESHOLD && stage != REVERSING) {
                 onTape = true;
             }
-            byte dominantOut = turnDirection == LEFT ? OUT_A : OUT_C;
-            long count = MotorTachoCount(dominantOut);
             switch (stage) {
             case NORMAL:
                 if (count > RIGHT_ANGLE_TACHO_COUNT) {
+                    ResetTachoCount(OUT_AC);
                     if (turnDirection == LEFT) {
                         OnRev(OUT_A, HIGH);
                         OnRev(OUT_C, LOW);
@@ -119,7 +122,8 @@ task main() {
                 }
                 break;
             case REVERSING:
-                if (count > 2 * RIGHT_ANGLE_TACHO_COUNT) {
+                if (count < REVERSE_RIGHT_ANGLE_TACHO_COUNT) {
+                    ResetTachoCount(OUT_AC);
                     turnDirection = !turnDirection;
                     if (turnDirection == LEFT) {
                         OnFwd(OUT_A, HIGH);
@@ -132,7 +136,7 @@ task main() {
                 }
                 break;
             case RETRYING:
-                if (count > 3 * RIGHT_ANGLE_TACHO_COUNT) {
+                if (count > RETRY_RIGHT_ANGLE_TACHO_COUNT) {
                     stage = DONE;
                 }
                 break;
