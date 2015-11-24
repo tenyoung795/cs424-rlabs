@@ -5,13 +5,87 @@ enum Direction {
     DOWN,
 };
 
+const unsigned int WIDTH = 12;
+const unsigned int HEIGHT = 12;
+
 struct Node {
     Direction parent;
     byte g;
     byte h;
     bool enqueued;
+    bool visited;
     bool obstacle;
 };
+
+struct Matrix {
+    Node nodes[WIDTH][HEIGHT];
+};
+
+struct Point {
+    char x;
+    char y;
+};
+
+struct Path {
+    Point points[WIDTH * HEIGHT];
+};
+
+void initMatrix(Matrix &mat, Point origin) {
+    for (char x = 0; x < WIDTH; ++x) {
+        for (char y = 0; y < HEIGHT; ++y) {
+            Node &node = mat.nodes[x][y];
+            bool isOrigin = x == origin.x && y == origin.y;
+            node.g = isOrigin ? 0 : UCHAR_MAX;
+            node.h = abs(x - origin.x) + abs(y - origin.y);
+            node.enqueued = isOrigin;
+            node.visited = false;
+        }
+    }
+}
+
+Point locateMinF(const Matrix &mat) {
+    Point result = {WIDTH, HEIGHT};
+    byte minF = UCHAR_MAX;
+    for (char x = 0; x < WIDTH; ++x) {
+        for (char y = 0; y < HEIGHT; ++y) {
+            Node &node = mat.nodes[x][y];
+            if (!node.enqueued) continue;
+            byte f = node.g + node.h;
+            if (f < minF) {
+                result.x = x;
+                result.y = y;
+                minF = f;
+            }
+        }
+    }
+    return result;
+}
+
+byte aStar(Path &path, Matrix &mat,
+           Point origin, Direction direction, Point destination) {
+    initMatrix(mat, origin);
+
+    byte queueSize = 1;
+    while (queueSize > 0) {
+        Point point = locateMinF(mat);
+        Node &node = mat.nodes[point.x][point.y];
+        node.enqueued = false;
+        node.visited = true;
+        --queueSize;
+
+        if (point.x == destination.x && point.y == destination.y) {
+            break;
+        }
+
+        if (point.x < WIDTH) {
+            Node &neighbor = mat.nodes[point.x+1][point.y];
+            if (!neighbor.visited) {
+                neighbor.direction = LEFT;
+                neighbor.enqueued = true;
+            }
+        }
+    }
+}
 
 task display() {
     while (true) {
