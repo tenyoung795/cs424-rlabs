@@ -1,17 +1,281 @@
 enum Direction {
-    RIGHT,
-    UP,
-    LEFT,
-    DOWN,
+    RIGHT = 0,
+    UP = 1,
+    LEFT = 2,
+    DOWN = 3,
 };
+
+enum Orientation {
+    HORIZONTAL,
+    VERTICAL,
+};
+
+const byte WIDTH = 7;
+const byte HEIGHT = 5;
+const byte AREA = WIDTH * HEIGHT;
+const Direction DIRECTION = 1;
+const byte ORIGIN_X = 0, ORIGIN_Y = 0;
+const byte DESTINATION_X = 4, DESTINATION_Y = 1;
 
 struct Node {
     Direction parent;
     byte g;
     byte h;
     bool enqueued;
+    bool visited;
     bool obstacle;
 };
+
+struct Point {
+    byte x;
+    byte y;
+};
+
+inline byte index(byte x, byte y) {
+    return x + y * WIDTH;
+}
+
+inline byte xCoord(byte i) {
+    return i % WIDTH;
+}
+
+inline byte yCoord(byte i) {
+    return i / WIDTH;
+}
+
+inline byte nodeH(char x, char y) {
+    char x1 = DESTINATION_X;
+    char y1 = DESTINATION_Y;
+    return abs(x - x1) + abs(y - y1);
+}
+
+void initMatrix(Node &mat[]) {
+    for (byte y = 0; y < HEIGHT; ++y) {
+        for (byte x = 0; x < WIDTH; ++x) {
+            byte i = index(x, y);
+            mat[i].g = UCHAR_MAX;
+            mat[i].h = nodeH(x, y);
+            mat[i].enqueued = false;
+            mat[i].visited = false;
+            mat[i].obstacle = false;
+        }
+    }
+}
+
+void addObstacles(Node &mat[], const Point &obstacles[]) {
+    unsigned int n = ArrayLen(obstacles);
+    for (unsigned int i = 0; i < n; ++i) {
+        byte x = obstacles[i].x;
+        byte y = obstacles[i].y;
+        mat[index(x, y)].obstacle = true;
+    }
+}
+
+inline byte nodeF(const Node &node) {
+    return node.g == UCHAR_MAX ? UCHAR_MAX : node.g + node.h;
+}
+
+byte locateMinF(const Node &mat[]) {
+    byte result = AREA;
+    byte minF = UCHAR_MAX;
+    for (byte y = 0; y < HEIGHT; ++y) {
+        for (byte x = 0; x < WIDTH; ++x) {
+            byte i = index(x, y);
+            if (!mat[i].enqueued) continue;
+            byte f = nodeF(mat[i]);
+            if (f < minF) {
+                result = i;
+                minF = f;
+            }
+        }
+    }
+    return result;
+}
+
+Orientation orientation(Direction direction) {
+    switch (direction) {
+    case RIGHT:
+    case LEFT:
+        return HORIZONTAL;
+    case UP:
+    case DOWN:
+        return VERTICAL;
+    }
+}
+
+byte cost(Direction from, Direction to) {
+    return orientation(from) == orientation(to)
+        ? (from == to ? 0 : 2)
+        : 1;
+}
+
+Direction flip(Direction direction) {
+    switch (direction) {
+    case RIGHT:
+        return LEFT;
+    case UP:
+        return DOWN;
+    case LEFT:
+        return RIGHT;
+    case DOWN:
+        return UP;
+    }
+}
+
+byte move(byte x, byte y, Direction direction) {
+    switch (direction) {
+    case RIGHT:
+        ++x;
+        break;
+    case UP:
+        ++y;
+        break;
+    case LEFT:
+        --x;
+        break;
+    case DOWN:
+        --y;
+        break;
+    }
+    return index(x, y);
+}
+
+bool checkNeighbor(Direction currentDirection, Node &mat[], byte x, byte y, Direction neighborDirection) {
+    byte index = move(x, y, neighborDirection);
+    if (mat[index].obstacle || mat[index].visited) {
+        return false;
+    }
+
+    byte tentativeG = cost(currentDirection, neighborDirection);
+    if (tentativeG < mat[index].g) {
+        mat[index].parent = flip(neighborDirection);
+        mat[index].g = tentativeG;
+    }
+
+    if (mat[index].enqueued) {
+        return false;
+    }
+    mat[index].enqueued = true;
+    return true;
+}
+
+int aStar(Direction &reversePath[], Node &mat[], byte x0, byte y0, Direction direction) {
+    byte origin = index(x0, y0);
+    mat[origin].g = 0;
+    mat[origin].enqueued = true;
+
+    bool foundDestination = false;
+    byte queueSize = 1;
+    while (queueSize > 0) {
+        byte i = locateMinF(mat);
+        mat[i].enqueued = false;
+        mat[i].visited = true;
+
+        byte x = xCoord(i);
+        byte y = yCoord(i);
+
+        ClearLine(LCD_LINE1);
+        NumOut(0, LCD_LINE1, queueSize);
+        NumOut(50, LCD_LINE1, x);
+        NumOut(75, LCD_LINE1, y);
+
+        --queueSize;
+
+        if (x == DESTINATION_X && y == DESTINATION_Y) {
+            foundDestination = true;
+        } else {
+            if (x < WIDTH - 1) {
+                queueSize += checkNeighbor(direction, mat, x, y, RIGHT);
+            }
+            if (y < HEIGHT - 1) {
+                queueSize += checkNeighbor(direction, mat, x, y, UP);
+            }
+            if (x > 0) {
+                queueSize += checkNeighbor(direction, mat, x, y, LEFT);
+            }
+            if (y > 0) {
+                queueSize += checkNeighbor(direction, mat, x, y, DOWN);
+            }
+        }
+    }
+
+    if (!foundDestination) return -1;
+
+    int pathLength = 0;
+    byte i = index(DESTINATION_X, DESTINATION_Y);
+    while (i != origin) {
+        Direction parent = mat[i].parent;
+        reversePath[pathLength] = flip(parent);
+        byte x = xCoord(i);
+        byte y = yCoord(i);
+        i = move(x, y, parent);
+        ++pathLength;
+    }
+    return pathLength;
+}
+
+void displayMatrix(const Node &mat[]) {
+    for (byte y = 0; y < HEIGHT; ++y) {
+        for (byte x = 0; x < WIDTH; ++x) {
+            if (mat[index(x, y)].obstacle) {
+                // I would think specifying the fill shape constant would work
+                // for rectangles but it doesn't?
+                for (byte i = 0; i < 6; ++i) {
+                    LineOut(x * 5, y * 5 + i, x * 5 + 5, y * 5 + i);
+                }
+            } else {
+                RectOut(x * 5, y * 5, 5, 5);
+            }
+        }
+    }
+}
+
+void displayPath(byte x, byte y, Direction direction,
+                 int pathLength, const Direction &reversePath[]) {
+    // Draws a < in the starting direction.
+    switch (direction) {
+    case RIGHT:
+        LineOut(5 + x * 5, 5 + y * 5,
+                x * 5, 2 + y * 5);
+        LineOut(x * 5, 2 + y * 5,
+                5 + x * 5, 5 + y * 5);
+        break;
+    case UP:
+        LineOut(x * 5, y * 5,
+                2 + x * 5, 5 + y * 5);
+        LineOut(2 + x * 5, 5 + y * 5,
+                5 + x * 5, y * 5);
+        break;
+    case LEFT:
+        LineOut(x * 5, 5 + y * 5,
+                5 + x * 5, 2 + y * 5);
+        LineOut(5 + x * 5, 2 + y * 5,
+                x * 5, 5 + y * 5);
+        break;
+    case DOWN:
+        LineOut(x * 5, 5 + y * 5,
+                2 + x * 5, y * 5);
+        LineOut(2 + x * 5, y * 5,
+                5 + x * 5, 5 + y * 5);
+        break;
+    }
+
+    // Avoid drawing the X if no path is possible.
+    if (pathLength < 0) return;
+
+    for (int i = pathLength - 1; i >= 0; --i) {
+        byte point = move(x, y, reversePath[i]);
+        x = xCoord(point);
+        y = yCoord(point);
+        PointOut(2 + x * 5, 2 + y * 5);
+    }
+
+    // Draws an X at the destination.
+    LineOut(x * 5, y * 5,
+            5 + x * 5, 5 + y * 5);
+    LineOut(x * 5, 5 + y * 5,
+            5 + x * 5, y * 5);
+}
 
 task display() {
     while (true) {
@@ -23,16 +287,28 @@ task display() {
 }
 
 task main() {
-    ResetTachoCount(OUT_AC);
-    OnFwd(OUT_A, 60);
-    OnRev(OUT_C, 60);
-    
-    start display;
-    while (MotorTachoCount(OUT_A) < 140);
-    Off(OUT_AC);
+    ClearScreen();
 
-    ResetTachoCount(OUT_AC);
-    OnFwd(OUT_AC, 90);
-    while (MotorTachoCount(OUT_A) < 425);
-    Off(OUT_AC);
+    Node matrix[AREA];
+    initMatrix(matrix);
+
+    Point knownObstacles[] = {
+        {2, 0},
+        {2, 1},
+        {0, 2}, {2, 2}, {3, 2}, {4, 2}, {5, 2},
+        {2, 4},
+    };
+    addObstacles(matrix, knownObstacles);
+
+    Direction reversePath[AREA];
+    int result = aStar(reversePath, matrix, ORIGIN_X, ORIGIN_Y, DIRECTION);
+    if (result < 0) {
+        ClearLine(LCD_LINE1);
+        TextOut(0, LCD_LINE1, "Error on A*");
+    } else {
+        ClearScreen();
+        displayMatrix(matrix);
+        displayPath(ORIGIN_X, ORIGIN_Y, DIRECTION, result, reversePath);
+    }
+    while (true) { }
 }
