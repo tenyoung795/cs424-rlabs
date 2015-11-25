@@ -1,12 +1,22 @@
 enum Direction {
-    RIGHT,
-    UP,
-    LEFT,
-    DOWN,
+    RIGHT = 0,
+    UP = 1,
+    LEFT = 2,
+    DOWN = 3,
 };
 
-const unsigned int WIDTH = 12;
-const unsigned int HEIGHT = 12;
+enum Orientation {
+    HORIZONTAL,
+    VERTICAL,
+};
+
+const byte IMPOSSIBLE = UCHAR_MAX;
+const byte WIDTH = 12;
+const byte HEIGHT = 12;
+const byte AREA = WIDTH * HEIGHT;
+const Direction DIRECTION = 1;
+const char ORIGIN_X = 0, ORIGIN_Y = 0;
+const char DESTINATION_X = 11, DESTINATION_Y = 11;
 
 struct Node {
     Direction parent;
@@ -17,43 +27,45 @@ struct Node {
     bool obstacle;
 };
 
-struct Matrix {
-    Node nodes[WIDTH][HEIGHT];
-};
-
 struct Point {
     char x;
     char y;
 };
 
-struct Path {
-    Point points[WIDTH * HEIGHT];
-};
+byte index(Point point) {
+    return point.x * WIDTH + point.y;
+}
 
-void initMatrix(Matrix &mat, Point origin) {
-    for (char x = 0; x < WIDTH; ++x) {
-        for (char y = 0; y < HEIGHT; ++y) {
-            Node &node = mat.nodes[x][y];
-            bool isOrigin = x == origin.x && y == origin.y;
-            node.g = isOrigin ? 0 : UCHAR_MAX;
-            node.h = abs(x - origin.x) + abs(y - origin.y);
-            node.enqueued = isOrigin;
-            node.visited = false;
+#define AT_MAT(mat, point) mat[index((point))]
+
+void initMatrix(Node &mat[]) {
+    Point p;
+    for (p.x = 0; p.x < WIDTH; ++p.x) {
+        for (p.y = 0; p.y < HEIGHT; ++p.y) {
+            AT_MAT(mat, p).g = UCHAR_MAX;
+            AT_MAT(mat, p).h = abs(p.x - DESTINATION_X) + abs(p.y - DESTINATION_Y);
+            AT_MAT(mat, p).enqueued = false;
+            AT_MAT(mat, p).visited = false;
         }
     }
 }
 
-Point locateMinF(const Matrix &mat) {
-    Point result = {WIDTH, HEIGHT};
+byte nodeF(const Node &node) {
+    return node.g + node.h;
+}
+
+Point locateMinF(const Node &mat[]) {
+    Point result;
+    result.x = WIDTH;
+    result.y = HEIGHT;
     byte minF = UCHAR_MAX;
-    for (char x = 0; x < WIDTH; ++x) {
-        for (char y = 0; y < HEIGHT; ++y) {
-            Node &node = mat.nodes[x][y];
-            if (!node.enqueued) continue;
-            byte f = node.g + node.h;
+    Point p;
+    for (p.x = 0; p.x < WIDTH; ++p.x) {
+        for (p.y = 0; p.y < HEIGHT; ++p.y) {
+            if (!AT_MAT(mat, p).enqueued) continue;
+            byte f = nodeF(AT_MAT(mat, p));
             if (f < minF) {
-                result.x = x;
-                result.y = y;
+                result = p;
                 minF = f;
             }
         }
@@ -61,28 +73,113 @@ Point locateMinF(const Matrix &mat) {
     return result;
 }
 
-byte aStar(Path &path, Matrix &mat,
-           Point origin, Direction direction, Point destination) {
-    initMatrix(mat, origin);
+Orientation orientation(Direction direction) {
+    switch (direction) {
+    case RIGHT:
+    case LEFT:
+        return HORIZONTAL;
+    case UP:
+    case DOWN:
+        return VERTICAL;
+    }
+}
 
+byte cost(Direction from, Direction to) {
+    return orientation(from) == orientation(to)
+        ? (from == to ? 0 : 2)
+        : 1;
+}
+
+Direction flip(Direction direction) {
+    switch (direction) {
+    case RIGHT:
+        return LEFT;
+    case UP:
+        return DOWN;
+    case LEFT:
+        return RIGHT;
+    case DOWN:
+        return UP;
+    }
+}
+
+Point move(Point point, Direction direction) {
+    switch (direction) {
+    case RIGHT:
+        ++point.x;
+        break;
+    case UP:
+        ++point.y;
+        break;
+    case LEFT:
+        --point.x;
+        break;
+    case DOWN:
+        --point.y;
+        break;
+    }
+    return point;
+}
+
+void checkNeighbor(Direction currentDirection, Node &mat[], Point point, Direction neighborDirection) {
+    point = move(point, neighborDirection);
+    if (!AT_MAT(mat, point).visited) {
+        AT_MAT(mat, point).parent = flip(neighborDirection);
+        AT_MAT(mat, point).g = cost(currentDirection, neighborDirection);
+        AT_MAT(mat, point).enqueued = true;
+    }
+}
+
+int aStar(Direction &path[], Node &mat[], Point origin, Direction direction) {
+    AT_MAT(mat, origin).g = 0;
+    AT_MAT(mat, origin).enqueued = true;
+
+    bool foundDestination = false;
     byte queueSize = 1;
     while (queueSize > 0) {
         Point point = locateMinF(mat);
-        Node &node = mat.nodes[point.x][point.y];
-        node.enqueued = false;
-        node.visited = true;
+        AT_MAT(mat, point).enqueued = false;
+        AT_MAT(mat, point).visited = true;
         --queueSize;
 
-        if (point.x == destination.x && point.y == destination.y) {
-            break;
-        }
-
-        if (point.x < WIDTH) {
-            Node &neighbor = mat.nodes[point.x+1][point.y];
-            if (!neighbor.visited) {
-                neighbor.direction = LEFT;
-                neighbor.enqueued = true;
+        if (point.x == DESTINATION_X && point.y == DESTINATION_Y) {
+            foundDestination = true;
+        } else {
+            if (point.x < WIDTH - 1) {
+                checkNeighbor(direction, mat, point, RIGHT);
             }
+            if (point.y < HEIGHT - 1) {
+                checkNeighbor(direction, mat, point, UP);
+            }
+            if (point.x > 0) {
+                checkNeighbor(direction, mat, point, LEFT);
+            }
+            if (point.y > 0) {
+                checkNeighbor(direction, mat, point, DOWN);
+            }
+        }
+    }
+
+    if (!foundDestination) return IMPOSSIBLE;
+
+    int pathLength = 0;
+    Point point;
+    point.x = DESTINATION_X;
+    point.y = DESTINATION_Y;
+    while (point.x != origin.x || point.y != origin.y) {
+        Direction parent = AT_MAT(mat, point).parent;
+        path[pathLength] = flip(parent);
+        point = move(point, parent);
+        ++pathLength;
+    }
+    return pathLength;
+}
+
+void displayMatrix(const Node &mat[], Point origin, int pathLength, const Direction &path[]) {
+    ClearScreen();
+    for (byte x = 0; x < WIDTH; ++x) {
+        for (byte y = 0; y < HEIGHT; ++y) {
+            RectOut(x * 4, 5 + y * 4, 4, 4, DRAW_OPT_POLYGON_POLYLINE);
         }
     }
 }
@@ -97,6 +194,7 @@ task display() {
 }
 
 task main() {
+    /*
     ResetTachoCount(OUT_AC);
     OnFwd(OUT_A, 60);
     OnRev(OUT_C, 60);
@@ -109,4 +207,13 @@ task main() {
     OnFwd(OUT_AC, 90);
     while (MotorTachoCount(OUT_A) < 425);
     Off(OUT_AC);
+    */
+    Node matrix[AREA];
+    initMatrix(matrix);
+    Point origin;
+    origin.x = ORIGIN_X;
+    origin.y = ORIGIN_Y;
+    Direction path[AREA];
+    displayMatrix(matrix, origin, aStar(path, matrix, origin, DIRECTION), path);
+    while (true) { }
 }
