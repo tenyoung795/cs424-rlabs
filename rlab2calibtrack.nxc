@@ -1,0 +1,75 @@
+// Calibration Track
+
+enum Direction {
+    RIGHT,
+    UP,
+    LEFT,
+    DOWN,
+};
+
+struct Node {
+    Direction parent;
+    byte g;
+    byte h;
+    bool enqueued;
+    bool obstacle;
+};
+
+int forward = 410;
+int reverse = 380;
+int right = 230;
+
+task display() {
+    while (true) {
+        ClearScreen();
+        TextOut(0, 0, "A tachos");
+        NumOut(0, 8, MotorTachoCount(OUT_A));
+        Wait(100);
+    }
+}
+
+task main() {
+
+
+    RotateMotor(OUT_AC, 90, forward);
+    Off(OUT_AC);
+    Wait(1000);
+
+    RotateMotorEx(OUT_AC, 50, right, 100, true, true);
+    Wait(1000);
+
+    RotateMotor(OUT_AC, 90, forward*2);
+    Off(OUT_AC);
+    Wait(1000);
+
+    RotateMotorEx(OUT_AC, 50, right, 100, true, true);
+    Wait(1000);
+
+    RotateMotor(OUT_AC, 90, forward*5);
+    Off(OUT_AC);
+    Wait(1000);
+
+    RotateMotorEx(OUT_AC, 50, right, 100, true, true);
+    Wait(1000);
+
+    RotateMotor(OUT_AC, 90, forward*4);
+    Off(OUT_AC);
+    Wait(1000);
+
+    RotateMotorEx(OUT_AC, 50, right, 100, true, true);
+    Wait(1000);
+
+    RotateMotor(OUT_AC, 90, forward*2);
+    Off(OUT_AC);
+    Wait(1000);
+
+    RotateMotorEx(OUT_AC, 50, right, 100, true, true);
+    Wait(1000);
+
+    RotateMotor(OUT_AC, 90, forward*2);
+    Off(OUT_AC);
+    Wait(1000);
+
+    RotateMotorEx(OUT_AC, 50, right, 100, true, true);
+    Wait(1000);
+}
