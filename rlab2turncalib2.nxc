@@ -1,0 +1,48 @@
+// tring working with RotateMotor
+
+enum Direction {
+    RIGHT,
+    UP,
+    LEFT,
+    DOWN,
+};
+
+struct Node {
+    Direction parent;
+    byte g;
+    byte h;
+    bool enqueued;
+    bool obstacle;
+};
+
+task display() {
+    while (true) {
+        ClearScreen();
+        TextOut(0, 0, "A tachos");
+        NumOut(0, 8, MotorTachoCount(OUT_A));
+        Wait(100);
+    }
+}
+
+task main() {
+
+for(int i = 0; i<5; i++)
+{
+    RotateMotor(OUT_AC, 90, 405);
+    Off(OUT_AC);
+    Wait(1000);
+
+    RotateMotor(OUT_AC, 80, -380);
+    //RotateMotorEx(OUT_AC, 80, -375, 0, true, true);
+    Off(OUT_AC);
+    Wait(1000);
+
+    //RotateMotor(OUT_A, 50, 380);
+    //RotateMotor(OUT_C, 50,-380);
+    //Wait(1000);
+
+
+    RotateMotorEx(OUT_AC, 50, 280, 100, true, true);
+    Wait(1000);
+}
+}
