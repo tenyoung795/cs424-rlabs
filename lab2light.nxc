@@ -1,0 +1,131 @@
+// light sensor
+// scale >30
+
+
+int forward = 420;
+int reverse = 380;
+int right = 210;
+
+task display() {
+    while (true) {
+        ClearScreen();
+        TextOut(0, 0, "A tachos");
+        NumOut(0, 8, MotorTachoCount(OUT_A));
+        Wait(100);
+    }
+}
+
+task main() {
+
+int j = 0;
+
+   SetSensorHTEOPD(IN_1, true);
+
+    unsigned int rawEOPD = SensorValueRaw(IN_1);
+    int scaleEOPD = SensorHTEOPD(IN_1);
+
+    ClearScreen();
+    TextOut(0,32,"IN1");
+    NumOut(0,40,rawEOPD);
+    NumOut(0,48,scaleEOPD);
+
+j = 1;
+int i = 0;
+for(i=0; i<j; i++)
+
+{
+
+    //RotateMotor(OUT_A, 90, forward);
+    //RotateMotor(OUT_C, 90, forward);
+    RotateMotorEx(OUT_AC, 90, forward, 0, true, true);
+    Coast(OUT_AC);
+    Wait(200);
+    Off(OUT_AC);
+    Wait(500);
+}
+
+    RotateMotorEx(OUT_AC, 50, right, 100, true, true);
+    Wait(500);
+
+j = 2;
+for(i=0; i<j; i++)
+{
+    //RotateMotor(OUT_AC, 90, forward);
+    RotateMotorEx(OUT_AC, 90, forward, 0, true, true);
+    Coast(OUT_AC);
+    Wait(200);
+    Off(OUT_AC);
+    Wait(500);
+    
+}
+    RotateMotorEx(OUT_AC, 50, right, 100, true, true);
+    Wait(500);
+
+j =5;
+for(i=0; i<j; i++)
+{
+    //RotateMotor(OUT_AC, 90, forward);
+    RotateMotorEx(OUT_AC, 90, forward, 0, true, true);
+    Coast(OUT_AC);
+    Wait(200);
+    Off(OUT_AC);
+    Wait(500);
+}
+    RotateMotorEx(OUT_AC, 50, right, 100, true, true);
+    Wait(500);
+
+j = 4;
+for(i=0; i<j; i++)
+{
+    //RotateMotor(OUT_AC, 90, forward);
+    RotateMotorEx(OUT_AC, 90, forward, 0, true, true);
+    Coast(OUT_AC);
+    Wait(200);
+    Off(OUT_AC);
+    Wait(500);
+}
+
+    RotateMotorEx(OUT_AC, 50, right, 100, true, true);
+    Wait(500);
+
+j = 2;
+for(i=0; i<j; i++)
+{
+    //RotateMotor(OUT_AC, 90, forward);
+    RotateMotorEx(OUT_AC, 90, forward, 0, true, true);
+    Coast(OUT_AC);
+    Wait(200);
+    Off(OUT_AC);
+    Wait(500);
+}
+
+    RotateMotorEx(OUT_AC, 50, right, 100, true, true);
+    Wait(200);
+
+j = 2;
+for(i=0; i<j; i++)
+{
+    //RotateMotor(OUT_AC, 90, forward);
+    RotateMotorEx(OUT_AC, 90, forward, 0, true, true);
+    Coast(OUT_AC);
+    Wait(200);
+    Off(OUT_AC);
+    Wait(500);
+}
+
+    RotateMotorEx(OUT_AC, 50, right, -100, true, true);
+    Wait(500);
+
+
+j = 2;
+for(i=0; i<j; i++)
+{
+    //RotateMotor(OUT_AC, 50, forward);
+    RotateMotorEx(OUT_AC, 90, forward, 0, true, true);
+    Coast(OUT_AC);
+    Wait(100);
+    Off(OUT_AC);
+    Wait(500);
+}
+}
+
