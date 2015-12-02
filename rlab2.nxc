@@ -205,7 +205,7 @@ int aStar(Direction &reversePath[], Node &mat[], byte x0, byte y0, Direction dir
     byte i = index(DESTINATION_X, DESTINATION_Y);
     while (i != origin) {
         Direction parent = mat[i].parent;
-        reversePath[pathLength] = flip(parent);
+        reversePath[pathLength] = parent;
         byte x = xCoord(i);
         byte y = yCoord(i);
         i = move(x, y, parent);
@@ -230,51 +230,53 @@ void displayMatrix(const Node &mat[]) {
     }
 }
 
-void displayPath(byte x, byte y, Direction direction,
+void displayPath(byte x0, byte y0, Direction direction,
                  int pathLength, const Direction &reversePath[]) {
     // Draws a < in the starting direction.
     switch (direction) {
     case RIGHT:
-        LineOut(5 + x * 5, 5 + y * 5,
-                x * 5, 2 + y * 5);
-        LineOut(x * 5, 2 + y * 5,
-                5 + x * 5, 5 + y * 5);
+        LineOut(5 + x0 * 5, 5 + y0 * 5,
+                x0 * 5, 2 + y0 * 5);
+        LineOut(x0 * 5, 2 + y0 * 5,
+                5 + x0 * 5, 5 + y0 * 5);
         break;
     case UP:
-        LineOut(x * 5, y * 5,
-                2 + x * 5, 5 + y * 5);
-        LineOut(2 + x * 5, 5 + y * 5,
-                5 + x * 5, y * 5);
+        LineOut(x0 * 5, y0 * 5,
+                2 + x0 * 5, 5 + y0 * 5);
+        LineOut(2 + x0 * 5, 5 + y0 * 5,
+                5 + x0 * 5, y0 * 5);
         break;
     case LEFT:
-        LineOut(x * 5, 5 + y * 5,
-                5 + x * 5, 2 + y * 5);
-        LineOut(5 + x * 5, 2 + y * 5,
-                x * 5, 5 + y * 5);
+        LineOut(x0 * 5, 5 + y0 * 5,
+                5 + x0 * 5, 2 + y0 * 5);
+        LineOut(5 + x0 * 5, 2 + y0 * 5,
+                x0 * 5, 5 + y0 * 5);
         break;
     case DOWN:
-        LineOut(x * 5, 5 + y * 5,
-                2 + x * 5, y * 5);
-        LineOut(2 + x * 5, y * 5,
-                5 + x * 5, 5 + y * 5);
+        LineOut(x0 * 5, 5 + y0 * 5,
+                2 + x0 * 5, y0 * 5);
+        LineOut(2 + x0 * 5, y0 * 5,
+                5 + x0 * 5, 5 + y0 * 5);
         break;
     }
 
     // Avoid drawing the X if no path is possible.
     if (pathLength < 0) return;
 
-    for (int i = pathLength - 1; i >= 0; --i) {
+    // Draws an X at the destination.
+    LineOut(DESTINATION_X * 5, DESTINATION_Y * 5,
+            5 + DESTINATION_X * 5, 5 + DESTINATION_Y * 5);
+    LineOut(DESTINATION_X * 5, 5 + DESTINATION_Y * 5,
+            5 + DESTINATION_X * 5, DESTINATION_Y * 5);
+
+    byte x = DESTINATION_X;
+    byte y = DESTINATION_Y;
+    for (int i = 0; i < pathLength; ++i) {
         byte point = move(x, y, reversePath[i]);
         x = xCoord(point);
         y = yCoord(point);
         PointOut(2 + x * 5, 2 + y * 5);
     }
-
-    // Draws an X at the destination.
-    LineOut(x * 5, y * 5,
-            5 + x * 5, 5 + y * 5);
-    LineOut(x * 5, 5 + y * 5,
-            5 + x * 5, y * 5);
 }
 
 task display() {
