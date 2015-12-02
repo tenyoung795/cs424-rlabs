@@ -268,20 +268,6 @@ task display() {
 }
 
 task main() {
-    /*
-    ResetTachoCount(OUT_AC);
-    OnFwd(OUT_A, 60);
-    OnRev(OUT_C, 60);
-    
-    start display;
-    while (MotorTachoCount(OUT_A) < 140);
-    Off(OUT_AC);
-
-    ResetTachoCount(OUT_AC);
-    OnFwd(OUT_AC, 90);
-    while (MotorTachoCount(OUT_A) < 425);
-    Off(OUT_AC);
-    */
     ClearScreen();
 
     Node matrix[AREA];
