@@ -105,8 +105,8 @@ Orientation orientation(Direction direction) {
 
 byte cost(Direction from, Direction to) {
     return orientation(from) == orientation(to)
-        ? (from == to ? 0 : 2)
-        : 1;
+        ? (from == to ? 1 : 3)
+        : 2;
 }
 
 Direction flip(Direction direction) {
@@ -235,10 +235,10 @@ void displayPath(byte x0, byte y0, Direction direction,
     // Draws a < in the starting direction.
     switch (direction) {
     case RIGHT:
-        LineOut(5 + x0 * 5, 5 + y0 * 5,
-                x0 * 5, 2 + y0 * 5);
-        LineOut(x0 * 5, 2 + y0 * 5,
-                5 + x0 * 5, 5 + y0 * 5);
+        LineOut(x0 * 5, 5 + y0 * 5,
+                5 + x0 * 5, 2 + y0 * 5);
+        LineOut(5 + x0 * 5, 2 + y0 * 5,
+                x0 * 5, y0 * 5);
         break;
     case UP:
         LineOut(x0 * 5, y0 * 5,
@@ -247,10 +247,10 @@ void displayPath(byte x0, byte y0, Direction direction,
                 5 + x0 * 5, y0 * 5);
         break;
     case LEFT:
-        LineOut(x0 * 5, 5 + y0 * 5,
-                5 + x0 * 5, 2 + y0 * 5);
-        LineOut(5 + x0 * 5, 2 + y0 * 5,
-                x0 * 5, 5 + y0 * 5);
+        LineOut(5 + x0 * 5, 5 + y0 * 5,
+                x0 * 5, 2 + y0 * 5);
+        LineOut(x0 * 5, 2 + y0 * 5,
+                5 + x0 * 5, y0 * 5);
         break;
     case DOWN:
         LineOut(x0 * 5, 5 + y0 * 5,
@@ -271,7 +271,7 @@ void displayPath(byte x0, byte y0, Direction direction,
 
     byte x = DESTINATION_X;
     byte y = DESTINATION_Y;
-    for (int i = 0; i < pathLength; ++i) {
+    for (int i = 0; i < pathLength - 1; ++i) {
         byte point = move(x, y, reversePath[i]);
         x = xCoord(point);
         y = yCoord(point);
