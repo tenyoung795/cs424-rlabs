@@ -122,7 +122,7 @@ Direction flip(Direction direction) {
     }
 }
 
-byte move(byte x, byte y, Direction direction) {
+void move(byte &x, byte &y, Direction direction) {
     switch (direction) {
     case RIGHT:
         ++x;
@@ -137,25 +137,25 @@ byte move(byte x, byte y, Direction direction) {
         --y;
         break;
     }
-    return index(x, y);
 }
 
 bool checkNeighbor(Direction currentDirection, Node &mat[], byte x, byte y, Direction neighborDirection) {
-    byte index = move(x, y, neighborDirection);
-    if (mat[index].obstacle || mat[index].visited) {
+    move(x, y, neighborDirection);
+    byte i = index(x, y);
+    if (mat[i].obstacle || mat[i].visited) {
         return false;
     }
 
     byte tentativeG = cost(currentDirection, neighborDirection);
-    if (tentativeG < mat[index].g) {
-        mat[index].parent = flip(neighborDirection);
-        mat[index].g = tentativeG;
+    if (tentativeG < mat[i].g) {
+        mat[i].parent = flip(neighborDirection);
+        mat[i].g = tentativeG;
     }
 
-    if (mat[index].enqueued) {
+    if (mat[i].enqueued) {
         return false;
     }
-    mat[index].enqueued = true;
+    mat[i].enqueued = true;
     return true;
 }
 
@@ -202,13 +202,12 @@ int aStar(Direction &reversePath[], Node &mat[], byte x0, byte y0, Direction dir
     if (!foundDestination) return -1;
 
     int pathLength = 0;
-    byte i = index(DESTINATION_X, DESTINATION_Y);
-    while (i != origin) {
-        Direction parent = mat[i].parent;
+    byte x = DESTINATION_X;
+    byte y = DESTINATION_Y;
+    while (x != x0 && y != y0) {
+        Direction parent = mat[index(x, y)].parent;
         reversePath[pathLength] = parent;
-        byte x = xCoord(i);
-        byte y = yCoord(i);
-        i = move(x, y, parent);
+        move(x, y, parent);
         ++pathLength;
     }
     return pathLength;
@@ -272,9 +271,7 @@ void displayPath(byte x0, byte y0, Direction direction,
     byte x = DESTINATION_X;
     byte y = DESTINATION_Y;
     for (int i = 0; i < pathLength - 1; ++i) {
-        byte point = move(x, y, reversePath[i]);
-        x = xCoord(point);
-        y = yCoord(point);
+        move(x, y, reversePath[i]);
         PointOut(2 + x * 5, 2 + y * 5);
     }
 }
