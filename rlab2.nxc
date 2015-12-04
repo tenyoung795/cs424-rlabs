@@ -10,12 +10,19 @@ enum Orientation {
     VERTICAL,
 };
 
+enum Turn {
+    RIGHT_TURN,
+    FORWARD,
+    LEFT_TURN,
+    BACKWARD,
+};
+
 const byte WIDTH = 7;
-const byte HEIGHT = 5;
+const byte HEIGHT = 6;
 const byte AREA = WIDTH * HEIGHT;
-const Direction DIRECTION = 1;
-const byte ORIGIN_X = 0, ORIGIN_Y = 0;
-const byte DESTINATION_X = 4, DESTINATION_Y = 1;
+const Direction DIRECTION = 2;
+const byte ORIGIN_X = 6, ORIGIN_Y = 0;
+const byte DESTINATION_X = 2, DESTINATION_Y = 3;
 
 struct Node {
     Direction parent;
@@ -270,9 +277,68 @@ void displayPath(byte x0, byte y0, Direction direction,
 
     byte x = DESTINATION_X;
     byte y = DESTINATION_Y;
-    for (int i = 0; i < pathLength - 1; ++i) {
+    for (int i = 0; i < pathLength; ++i) {
         move(x, y, reversePath[i]);
         PointOut(2 + x * 5, 2 + y * 5);
+    }
+}
+
+Turn howToTurn(Direction from, Direction to) {
+    // Rotate `to` according to the axis defined by `from`.
+    to = (to - from) % 4;
+    switch (to) {
+    case RIGHT:
+        return FORWARD;
+    case UP:
+        return LEFT_TURN;
+    case LEFT:
+        return BACKWARD;
+    case DOWN:
+        return RIGHT_TURN;
+    }
+}
+
+void turnRight() {
+    RotateMotorEx(OUT_AC, 50, 140, 100, true, true);
+    Wait(500);
+}
+
+void turnLeft() {
+    RotateMotorEx(OUT_AC, 50, 140, -100, true, true);
+    Wait(500);
+}
+
+void turnBackward() {
+    // TODO
+}
+
+void moveAhead() {
+    RotateMotorEx(OUT_AC, 50, 415, 0, false, false);
+    Wait(1000);
+}
+
+void followPath(byte &x, byte &y, Direction &direction,
+                int pathLength, const Direction &reversePath[]) {
+    for (int i = pathLength - 1; i >= 0; --i) {
+        Direction newDirection = flip(reversePath[i]);
+
+        switch (howToTurn(direction, newDirection)) {
+        case RIGHT_TURN:
+            turnRight();
+            break;
+        case FORWARD:
+            break;
+        case LEFT_TURN:
+            turnLeft();
+            break;
+        case BACKWARD:
+            turnBackward();
+            break;
+        }
+        moveAhead();
+
+        move(x, y, newDirection);
+        direction = newDirection;
     }
 }
 
@@ -287,15 +353,16 @@ task display() {
 
 task main() {
     ClearScreen();
+    SetMotorRegulationTime(20);
 
     Node matrix[AREA];
     initMatrix(matrix);
 
     Point knownObstacles[] = {
-        {2, 0},
-        {2, 1},
-        {0, 2}, {2, 2}, {3, 2}, {4, 2}, {5, 2},
-        {2, 4},
+        {4, 0},
+        {1, 2}, {2, 2}, {3, 2}, {4, 2}, {6, 2},
+        {4, 3},
+        {4, 4},
     };
     addObstacles(matrix, knownObstacles);
 
@@ -309,5 +376,10 @@ task main() {
         displayMatrix(matrix);
         displayPath(ORIGIN_X, ORIGIN_Y, DIRECTION, result, reversePath);
     }
+
+    byte x = ORIGIN_X;
+    byte y = ORIGIN_Y;
+    Direction direction = DIRECTION;
+    followPath(x, y, direction, result, reversePath);
     while (true) { }
 }
