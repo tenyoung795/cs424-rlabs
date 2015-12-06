@@ -17,12 +17,26 @@ enum Turn {
     BACKWARD,
 };
 
+#define TRACK 3
+
+#if TRACK == 1
+const byte WIDTH = 8;
+const byte HEIGHT = 9;
+const byte SOURCE_X = 0, SOURCE_Y = 0;
+const byte DESTINATION_X = 4, DESTINATION_Y = 8;
+#elif TRACK == 2
 const byte WIDTH = 7;
-const byte HEIGHT = 6;
+const byte HEIGHT = 8;
+const byte SOURCE_X = 3, SOURCE_Y = 0;
+const byte DESTINATION_X = 2, DESTINATION_Y = 5;
+#elif TRACK == 3
+const byte WIDTH = 5;
+const byte HEIGHT = 8;
+const byte SOURCE_X = 0, SOURCE_Y = 0;
+const byte DESTINATION_X = 0, DESTINATION_Y = 7;
+#endif
+
 const byte AREA = WIDTH * HEIGHT;
-const Direction DIRECTION = 2;
-const byte ORIGIN_X = 6, ORIGIN_Y = 0;
-const byte DESTINATION_X = 2, DESTINATION_Y = 3;
 
 struct Node {
     Direction parent;
@@ -64,7 +78,6 @@ void initMatrix(Node &mat[]) {
             mat[i].h = nodeH(x, y);
             mat[i].enqueued = false;
             mat[i].visited = false;
-            mat[i].obstacle = false;
         }
     }
 }
@@ -173,7 +186,7 @@ int aStar(Direction &reversePath[], Node &mat[], byte x0, byte y0, Direction dir
 
     bool foundDestination = false;
     byte queueSize = 1;
-    while (queueSize > 0) {
+    while (queueSize > 0 || !foundDestination) {
         byte i = locateMinF(mat);
         mat[i].enqueued = false;
         mat[i].visited = true;
@@ -211,7 +224,7 @@ int aStar(Direction &reversePath[], Node &mat[], byte x0, byte y0, Direction dir
     int pathLength = 0;
     byte x = DESTINATION_X;
     byte y = DESTINATION_Y;
-    while (x != x0 && y != y0) {
+    while (!(x == x0 && y == y0)) {
         Direction parent = mat[index(x, y)].parent;
         reversePath[pathLength] = parent;
         move(x, y, parent);
@@ -298,47 +311,71 @@ Turn howToTurn(Direction from, Direction to) {
     }
 }
 
-void turnRight() {
-    RotateMotorEx(OUT_AC, 50, 140, 100, true, true);
+long turnAngle(bool fromRest) {
+    return fromRest ? 105 : 145;
+}
+
+void turnRight(bool fromRest) {
+    RotateMotorEx(OUT_AC, 50, turnAngle(fromRest), 100, true, true);
     Wait(500);
 }
 
-void turnLeft() {
-    RotateMotorEx(OUT_AC, 50, 140, -100, true, true);
+void turnLeft(bool fromRest) {
+    RotateMotorEx(OUT_AC, 50, turnAngle(fromRest), -100, true, true);
     Wait(500);
 }
 
-void turnBackward() {
-    // TODO
+void turnBackward(bool fromRest) {
+    turnRight(fromRest);
+    turnRight(false);
 }
 
-void moveAhead() {
-    RotateMotorEx(OUT_AC, 50, 415, 0, false, false);
-    Wait(1000);
+bool moveAhead() {
+    ResetTachoCount(OUT_AC);
+    OnFwd(OUT_AC, 50);
+    bool foundObstacle = false;
+    while (MotorTachoCount(OUT_A) < 415 && !foundObstacle) {
+        if (SensorValue(IN_1) <= 40 || SensorHTEOPD(IN_3) >= 200) {
+            foundObstacle = true;
+        }
+    }
+    long tachos = MotorTachoCount(OUT_A);
+    if (foundObstacle) {
+        Off(OUT_AC);
+        Wait(500);
+        RotateMotor(OUT_AC, 30, -tachos);
+        return false;
+    }
+    Coast(OUT_AC);
+    while (MotorActualSpeed(OUT_A) > 0 && MotorActualSpeed(OUT_C) > 0);
+    Wait(500);
+    return true;
 }
 
 void followPath(byte &x, byte &y, Direction &direction,
                 int pathLength, const Direction &reversePath[]) {
+    bool fromRest = true;
     for (int i = pathLength - 1; i >= 0; --i) {
         Direction newDirection = flip(reversePath[i]);
 
         switch (howToTurn(direction, newDirection)) {
         case RIGHT_TURN:
-            turnRight();
+            turnRight(fromRest);
             break;
         case FORWARD:
             break;
         case LEFT_TURN:
-            turnLeft();
+            turnLeft(fromRest);
             break;
         case BACKWARD:
-            turnBackward();
+            turnBackward(fromRest);
             break;
         }
-        moveAhead();
-
-        move(x, y, newDirection);
         direction = newDirection;
+        if (!moveAhead()) break;
+
+        move(x, y, direction);
+        fromRest = false;
     }
 }
 
@@ -352,34 +389,58 @@ task display() {
 }
 
 task main() {
-    ClearScreen();
+    ResetTachoCount(OUT_AC);
     SetMotorRegulationTime(20);
+    SetSensorLight(IN_1);
+    SetSensorHTEOPD(IN_3, true);
 
     Node matrix[AREA];
-    initMatrix(matrix);
-
+#if TRACK == 1
     Point knownObstacles[] = {
-        {4, 0},
-        {1, 2}, {2, 2}, {3, 2}, {4, 2}, {6, 2},
-        {4, 3},
-        {4, 4},
+        {0, 2}, {1, 2}, {2, 2}, {6, 2}, {7, 2},
+        {3, 6}, {4, 6}, {5, 6}, {6, 6}. {7, 6}, 
     };
     addObstacles(matrix, knownObstacles);
+#elif TRACK == 2
+    Point knownObstacles[] = {
+        {2, 0}, {4, 0},
+        {2, 2}, {4, 2},
+        {0, 3}, {1, 3}, {2, 3}, {4, 3},
+        {4, 4}, {4, 5},
+//        {3, 2}, {2, 6}, unknown
+    };
+    addObstacles(matrix, knownObstacles);
+#elif TRACK == 3
+#endif
 
     Direction reversePath[AREA];
-    int result = aStar(reversePath, matrix, ORIGIN_X, ORIGIN_Y, DIRECTION);
-    if (result < 0) {
-        ClearLine(LCD_LINE1);
-        TextOut(0, LCD_LINE1, "Error on A*");
-    } else {
-        ClearScreen();
-        displayMatrix(matrix);
-        displayPath(ORIGIN_X, ORIGIN_Y, DIRECTION, result, reversePath);
-    }
 
-    byte x = ORIGIN_X;
-    byte y = ORIGIN_Y;
-    Direction direction = DIRECTION;
-    followPath(x, y, direction, result, reversePath);
-    while (true) { }
+    byte x = SOURCE_X;
+    byte y = SOURCE_Y;
+    Direction direction = UP;
+    while (true) {
+        ClearScreen();
+
+        initMatrix(matrix);
+        int result = aStar(reversePath, matrix, x, y, direction);
+        if (result < 0) {
+            ClearLine(LCD_LINE1);
+            TextOut(0, LCD_LINE1, "Error on A*");
+            break;
+        } else {
+            ClearScreen();
+            
+            displayMatrix(matrix);
+            displayPath(x, y, direction, result, reversePath);
+        }
+        followPath(x, y, direction, result, reversePath);
+
+        if (x == DESTINATION_X && y == DESTINATION_Y) break;
+
+        byte foundObstacleX = x;
+        byte foundObstacleY = y;
+        move(foundObstacleX, foundObstacleY, direction);
+        matrix[index(foundObstacleX, foundObstacleY)].obstacle = true;
+    }
+    while (true);
 }

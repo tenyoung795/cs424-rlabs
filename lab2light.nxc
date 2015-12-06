@@ -13,12 +13,15 @@ task display() {
         NumOut(0, 8, MotorTachoCount(OUT_A));
 
 
-    unsigned int rawEOPD = SensorValueRaw(IN_1);
-    int scaleEOPD = SensorHTEOPD(IN_1);
+    unsigned int rawEOPD = SensorValueRaw(IN_3);
+    int scaleEOPD = SensorHTEOPD(IN_3);
 
     TextOut(0,32,"IN1");
     NumOut(0,40,rawEOPD);
     NumOut(0,48,scaleEOPD);
+
+    NumOut(0, 56, SensorValue(IN_1));
+
      Wait(100);
 
     }
@@ -28,10 +31,12 @@ task main() {
 
 int j = 0;
 
+    SetSensorLight(IN_1);
     start display;
 
-    SetSensorHTEOPD(IN_1, true);
+    SetSensorHTEOPD(IN_3, true);
 
+#if 0
 j = 1;
 int i = 0;
 for(i=0; i<j; i++)
@@ -143,5 +148,6 @@ for(i=0; i<j; i++)
     Off(OUT_AC);
     Wait(500);
 }
+#endif
 }
 
