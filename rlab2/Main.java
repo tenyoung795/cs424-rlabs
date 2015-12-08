@@ -3,6 +3,7 @@ import java.util.List;
 import javax.microedition.lcdui.Graphics;
 import lejos.robotics.navigation.DifferentialPilot;
 import lejos.robotics.navigation.Navigator;
+import lejos.nxt.Button;
 import lejos.nxt.LightSensor;
 import lejos.nxt.Motor;
 import lejos.nxt.SensorPort;
@@ -48,6 +49,6 @@ class Main {
 
             direction = track.follow(navigator, lightSensor, eopdSensor, direction, reversePath);
         }
-        while (true);
+        Button.ESCAPE.waitForPressAndRelease();
     }
 }

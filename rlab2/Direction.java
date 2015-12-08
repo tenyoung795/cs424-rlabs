@@ -11,7 +11,7 @@ public enum Direction {
         }
 
         public void move(Point point) {
-            point.move(1, 0);
+            point.translate(1, 0);
         }
     }, UP {
         public Orientation orientation() {
@@ -23,7 +23,7 @@ public enum Direction {
         }
 
         public void move(Point point) {
-            point.move(0, 1);
+            point.translate(0, 1);
         }
     }, LEFT {
         public Orientation orientation() {
@@ -35,7 +35,7 @@ public enum Direction {
         }
 
         public void move(Point point) {
-            point.move(-1, 0);
+            point.translate(-1, 0);
         }
     }, DOWN {
         public Orientation orientation() {
@@ -47,7 +47,7 @@ public enum Direction {
         }
 
         public void move(Point point) {
-            point.move(0, -1);
+            point.translate(0, -1);
         }
     };
 

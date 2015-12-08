@@ -48,7 +48,9 @@ public final class Track {
         int minF = Integer.MAX_VALUE;
         for (int y = 0; y < height; ++y) {
             for (int x = 0; x < width; ++x) {
-                int f = matrix[x][y].f();
+                Node node = matrix[y][x];
+                if (node.isObstacle() || !node.isEnqueued()) continue;
+                int f = node.f();
                 if (f < minF) {
                     result = new Point(x, y);
                     minF = f;
@@ -64,9 +66,10 @@ public final class Track {
 
         boolean foundDestination = false;
         int queueSize = 1;
-        while (queueSize > 0 || !foundDestination) {
+        while (queueSize > 0) {
             Point p = locateMinF();
             matrix[p.y][p.x].visit();
+
             --queueSize;
 
             if (destination.equals(p)) {
@@ -104,9 +107,9 @@ public final class Track {
         for (int y = 0; y < height; ++y) {
             for (int x = 0; x < width; ++x) {
                 if (matrix[y][x].isObstacle()) {
-                    graphics.fillRect(x * 5, 63 - y * 5, 5, 5);
+                    graphics.fillRect(x * 5, 63 - (5 + y * 5), 6, 6);
                 } else {
-                    graphics.drawRect(x * 5, 63 - y * 5, 5, 5);
+                    graphics.drawRect(x * 5, 63 - (5 + y * 5), 5, 5);
                 }
             }
         }
@@ -162,13 +165,14 @@ public final class Track {
             direction = reverseDirection.flip();
             direction.move(p);
             
-            navigator.goTo(p.x - source.x, p.y - source.y);
+            navigator.goTo((p.x - source.x) * 304.8f, (p.y - source.y) * 304.8f);
             boolean foundObstacle = false;
             while (navigator.isMoving() && !foundObstacle) {
                 if (lightSensor.getLightValue() <= 40 || eopdSensor.processedValue() >= 200) {
                     navigator.stop();
                     MoveController controller = navigator.getMoveController();
                     controller.travel(-controller.getMovement().getDistanceTraveled());
+                    reverseDirection.move(p);
                     foundObstacle = true;
                 }
             }
