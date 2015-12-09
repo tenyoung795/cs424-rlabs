@@ -106,7 +106,8 @@ public final class Track {
         return reversePath.toArray(new Direction[reversePath.size()]);
     }
 
-    public void displayMatrix(Graphics graphics) {
+    public void displayMatrix(Graphics graphics,
+                              Direction startDirection) {
         for (int y = 0; y < height; ++y) {
             for (int x = 0; x < width; ++x) {
                 if (matrix[y][x].isObstacle()) {
@@ -116,10 +117,7 @@ public final class Track {
                 }
             }
         }
-    }
 
-    public void displayPath(Graphics graphics,
-                            Direction startDirection, Direction[] reversePath) {
         // Draws a < in the starting direction.
         switch (startDirection) {
             case RIGHT:
@@ -153,15 +151,10 @@ public final class Track {
                           5 + destination.x * 5, 63 - (5 + destination.y * 5));
         graphics.drawLine(destination.x * 5, 63 - (5 + destination.y * 5),
                           5 + destination.x * 5, 63 - (destination.y * 5));
-
-        Point p = new Point(destination);
-        for (Direction direction : reversePath) {
-            direction.move(p);
-            graphics.fillRect(2 + p.x * 5, 63 - (2 + p.y * 5), 1, 1);
-        }
     }
 
     Direction follow(DifferentialPilot pilot, LightSensor lightSensor, EOPD eopdSensor,
+                     Graphics graphics,
                      Direction direction, Direction reversePath[]) {
         for (int i = reversePath.length - 1; i >= 0; --i) {
             Direction newDirection = reversePath[i].flip();
@@ -185,6 +178,7 @@ public final class Track {
             direction = newDirection;
             if (foundObstacle) break;
             direction.move(source);
+            graphics.fillRect(2 + source.x * 5, 63 - (2 + source.y * 5), 1, 1);
         }
         return direction;
     }

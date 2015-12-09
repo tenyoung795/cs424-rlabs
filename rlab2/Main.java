@@ -41,15 +41,16 @@ class Main {
         Direction direction = Direction.UP;
 
         graphics.clear();
+        track.displayMatrix(graphics, direction);
 
         while (!track.isDone()) {
             track.reset();
             Direction[] reversePath = track.aStar(direction);
 
-            track.displayMatrix(graphics);
-            track.displayPath(graphics, direction, reversePath);
+            track.displayMatrix(graphics, direction);
 
-            direction = track.follow(pilot, lightSensor, eopdSensor, direction, reversePath);
+            direction = track.follow(pilot, lightSensor, eopdSensor,
+                                     graphics, direction, reversePath);
         }
         long duration = System.currentTimeMillis() - start;
         System.out.println(duration / 1000);
