@@ -1,8 +1,6 @@
 import java.awt.Point;
-import java.util.List;
 import javax.microedition.lcdui.Graphics;
 import lejos.robotics.navigation.DifferentialPilot;
-import lejos.robotics.navigation.Navigator;
 import lejos.nxt.Button;
 import lejos.nxt.LightSensor;
 import lejos.nxt.Motor;
@@ -32,23 +30,29 @@ class Main {
     }
 
     public static void main(String[] args) {
-        Track track = whichTrack(1);
+        long start = System.currentTimeMillis();
+        Track track = whichTrack(3);
         Graphics graphics = new Graphics();
-        Navigator navigator = new Navigator(new DifferentialPilot(85.5, 95.5, Motor.C, Motor.A));
+        DifferentialPilot pilot = new DifferentialPilot(8.16, 9.55, Motor.C, Motor.A);
+        pilot.setAcceleration((int)(pilot.getMaxTravelSpeed() * 1));
+
         LightSensor lightSensor = new LightSensor(SensorPort.S1);
         EOPD eopdSensor = new EOPD(SensorPort.S3);
         Direction direction = Direction.UP;
-        while (!track.isDone()) {
-            graphics.clear();
 
+        graphics.clear();
+
+        while (!track.isDone()) {
             track.reset();
-            List<Direction> reversePath = track.aStar(direction);
+            Direction[] reversePath = track.aStar(direction);
 
             track.displayMatrix(graphics);
             track.displayPath(graphics, direction, reversePath);
 
-            direction = track.follow(navigator, lightSensor, eopdSensor, direction, reversePath);
+            direction = track.follow(pilot, lightSensor, eopdSensor, direction, reversePath);
         }
+        long duration = System.currentTimeMillis() - start;
+        System.out.println(duration / 1000);
         Button.ESCAPE.waitForPressAndRelease();
     }
 }

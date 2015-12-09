@@ -6,13 +6,10 @@ run: Main.nxj
 upload: Main.nxj
 	nxjupload $<
 
-Main.nxd: *.class
-	nxjlink -od $@ Main
-
-Main.nxj: *.class
+Main.nxj: Main.class
 	nxjlink -o $@ Main
 
-Main.class: *.java
+Main.class: Main.java Track.java Node.java Direction.java Turn.java Orientation.java
 	nxjc Main.java
 
 clean:

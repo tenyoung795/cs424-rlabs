@@ -1,9 +1,9 @@
 import java.awt.Point;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.NoSuchElementException;
 import javax.microedition.lcdui.Graphics;
-import lejos.robotics.navigation.MoveController;
-import lejos.robotics.navigation.Navigator;
+import lejos.robotics.navigation.DifferentialPilot;
 import lejos.nxt.LightSensor;
 import lejos.nxt.addon.EOPD;
 
@@ -57,10 +57,13 @@ public final class Track {
                 }
             }
         }
+        if (result == null) {
+            throw new NoSuchElementException("Queue is empty");
+        }
         return result;
     }
 
-    public List<Direction> aStar(Direction direction) {
+    public Direction[] aStar(Direction direction) {
         List<Direction> reversePath = new ArrayList<>(width * height);
         matrix[source.y][source.x].enqueueAsSource();
 
@@ -100,7 +103,7 @@ public final class Track {
             reversePath.add(parent);
             parent.move(p);
         }
-        return reversePath;
+        return reversePath.toArray(new Direction[reversePath.size()]);
     }
 
     public void displayMatrix(Graphics graphics) {
@@ -116,7 +119,7 @@ public final class Track {
     }
 
     public void displayPath(Graphics graphics,
-                            Direction startDirection, List<Direction> reversePath) {
+                            Direction startDirection, Direction[] reversePath) {
         // Draws a < in the starting direction.
         switch (startDirection) {
             case RIGHT:
@@ -146,10 +149,10 @@ public final class Track {
         }
 
         // Draws an X at the destination.
-        graphics.drawLine(destination.x * 5, destination.y * 5,
-                          5 + destination.x * 5, 5 + destination.y * 5);
-        graphics.drawLine(destination.x * 5, 5 + destination.y * 5,
-                          5 + destination.x * 5, destination.y * 5);
+        graphics.drawLine(destination.x * 5, 63 - destination.y * 5,
+                          5 + destination.x * 5, 63 - (5 + destination.y * 5));
+        graphics.drawLine(destination.x * 5, 63 - (5 + destination.y * 5),
+                          5 + destination.x * 5, 63 - (destination.y * 5));
 
         Point p = new Point(destination);
         for (Direction direction : reversePath) {
@@ -158,27 +161,31 @@ public final class Track {
         }
     }
 
-    Direction follow(Navigator navigator, LightSensor lightSensor, EOPD eopdSensor,
-                     Direction direction, List<Direction> reversePath) {
-        Point p = new Point(source);
-        for (Direction reverseDirection : reversePath) {
-            direction = reverseDirection.flip();
-            direction.move(p);
+    Direction follow(DifferentialPilot pilot, LightSensor lightSensor, EOPD eopdSensor,
+                     Direction direction, Direction reversePath[]) {
+        for (int i = reversePath.length - 1; i >= 0; --i) {
+            Direction newDirection = reversePath[i].flip();
+
+            Turn turn = direction.howToTurn(newDirection);
+            turn.perform(pilot);
+            pilot.travel(30.48, true);
             
-            navigator.goTo((p.x - source.x) * 304.8f, (p.y - source.y) * 304.8f);
             boolean foundObstacle = false;
-            while (navigator.isMoving() && !foundObstacle) {
-                if (lightSensor.getLightValue() <= 40 || eopdSensor.processedValue() >= 200) {
-                    navigator.stop();
-                    MoveController controller = navigator.getMoveController();
-                    controller.travel(-controller.getMovement().getDistanceTraveled());
-                    reverseDirection.move(p);
+            while (pilot.isMoving() && !foundObstacle) {
+                if (lightSensor.readValue() <= 35 || eopdSensor.processedValue() >= 32) {
+                    pilot.stop();
+                    pilot.travel(-15.24);
+                    Point p = new Point(source);
+                    newDirection.move(p);
+                    matrix[p.y][p.x].markObstacle();
                     foundObstacle = true;
                 }
             }
+
+            direction = newDirection;
             if (foundObstacle) break;
+            direction.move(source);
         }
-        source.setLocation(p);
         return direction;
     }
 }
