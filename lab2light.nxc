@@ -12,6 +12,8 @@ task display() {
         TextOut(0, 0, "A tachos");
         NumOut(0, 8, MotorTachoCount(OUT_A));
 
+    NumOut(0, 16, MotorTurnRatio(OUT_A));
+    NumOut(50, 16, MotorTurnRatio(OUT_C));
 
     unsigned int rawEOPD = SensorValueRaw(IN_3);
     int scaleEOPD = SensorHTEOPD(IN_3);
@@ -27,6 +29,27 @@ task display() {
     }
 }
 
+void turnRight() {
+    ResetAllTachoCounts(OUT_AC);
+    RotateMotor(OUT_C, 60, 262);
+    Wait(500);
+}
+
+void turnLeft() {
+    ResetAllTachoCounts(OUT_AC);
+    RotateMotor(OUT_A, 60, 262);
+    Wait(500);
+}
+
+void moveAhead() {
+    ResetAllTachoCounts(OUT_AC);
+    OnFwd(OUT_AC, 50);
+    while (MotorTachoCount(OUT_A) < 415);
+    Coast(OUT_AC);
+    while (MotorActualSpeed(OUT_A) > 0 && MotorActualSpeed(OUT_C) > 0);
+    Wait(500);
+}
+
 task main() {
 
 int j = 0;
@@ -35,6 +58,16 @@ int j = 0;
     start display;
 
     SetSensorHTEOPD(IN_3, true);
+    while (true) {
+        for (int i = 0; i < 4; ++i) {
+            turnRight();
+            moveAhead();
+        }
+        for (int i = 0; i < 4; ++i) {
+            turnLeft();
+            moveAhead();
+        }
+    }   
 
 #if 0
 j = 1;
