@@ -31,18 +31,16 @@ class Main {
             }
         });
         timer.start();
+        loop:
         while (true) {
             controller.arcForward(20);
 
-            boolean done = false;
             while (!enteredTapeWall(lightSensor)) {
                 if (Button.ENTER.isDown()) {
-                    done = true;
-                    break;
+                    break loop;
                 }
                 Thread.yield();
             }
-            if (done) break;
 
             controller.rotate(-45);
         }
