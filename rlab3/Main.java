@@ -24,7 +24,7 @@ class Main {
         EOPD eopdSensor = new EOPD(SensorPort.S3);
         LightSensor lightSensor = new LightSensor(SensorPort.S4);
         long start = System.currentTimeMillis();
-        Timer timer = new Timer(500, new TimerListener() {
+        Timer timer = new Timer(1000, new TimerListener() {
             @Override
             public void timedOut() {
                 LCD.drawInt((int)((System.currentTimeMillis() - start) / 1000), 0, 0);
