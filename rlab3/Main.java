@@ -31,10 +31,10 @@ class Main {
             }
         });
         timer.start();
-        boolean done = false;
-        while (!done) {
+        while (true) {
             controller.arcForward(20);
 
+            boolean done = false;
             while (!enteredTapeWall(lightSensor)) {
                 if (Button.ENTER.isDown()) {
                     done = true;
