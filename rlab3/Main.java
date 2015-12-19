@@ -28,7 +28,7 @@ class Main {
     public static void main(String[] args) {
         ArcRotateMoveController controller = new DifferentialPilot(
             MoveController.WHEEL_SIZE_RCX, 10.05, Motor.C, Motor.A);
-        controller.setTravelSpeed(controller.getTravelSpeed() * 1);
+        controller.setTravelSpeed(controller.getTravelSpeed() * 0.9);
         controller.setRotateSpeed(controller.getRotateSpeed() * 1);
         UltrasonicSensor ultrasonicSensor = new UltrasonicSensor(SensorPort.S1);
         EOPD eopdSensor = new EOPD(SensorPort.S3);
@@ -46,7 +46,7 @@ class Main {
         timer.start();
         loop:
         while (true) {
-            controller.arcForward(25);
+            controller.arcForward(40);
 
             while (!(enteredTapeWall(lightSensor)
                 || tooCloseToFrontWall(ultrasonicSensor)
